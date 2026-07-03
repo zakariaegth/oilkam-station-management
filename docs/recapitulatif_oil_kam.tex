@@ -1,0 +1,398 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\geometry{margin=2.2cm}
+\definecolor{oilgreen}{HTML}{115C45}
+\definecolor{oildark}{HTML}{0A352A}
+\definecolor{oilamber}{HTML}{F4B43F}
+\definecolor{softgray}{HTML}{F4F6F4}
+\definecolor{textgray}{HTML}{4D5A56}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=oilgreen,
+  urlcolor=oilgreen
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Projet Oil Kam}
+\rhead{Récapitulatif de version}
+\cfoot{\thepage}
+
+\titleformat{\section}{\Large\bfseries\color{oilgreen}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\large\bfseries\color{oildark}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{textgray}}{\thesubsubsection}{0.7em}{}
+
+\setlist[itemize]{topsep=3pt,itemsep=3pt,leftmargin=1.4em}
+\setlist[enumerate]{topsep=3pt,itemsep=3pt,leftmargin=1.6em}
+\renewcommand{\arraystretch}{1.25}
+
+\newcommand{\role}[1]{\textbf{\color{oilgreen}#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+  {\Huge\bfseries\color{oildark} Application Oil Kam\par}
+  \vspace{0.35cm}
+  {\Large Application web de gestion pour station-service\par}
+  \vspace{1.2cm}
+  \rule{0.8\textwidth}{1pt}
+  \vspace{0.8cm}
+
+  {\Large\bfseries Récapitulatif professionnel de la version actuelle\par}
+  \vspace{0.4cm}
+  {\large Version démontrable pour réunion de suivi\par}
+
+  \vfill
+  \begin{tabular}{>{\bfseries}p{4cm}p{8cm}}
+    Projet & Oil Kam -- gestion interne station-service \\
+    Type & Application web locale avec base SQLite \\
+    Objectif & Présenter une base fonctionnelle validable avant poursuite du développement \\
+    Date & 24 juin 2026 \\
+  \end{tabular}
+
+  \vfill
+  {\color{oilgreen}\bfseries Document préparé pour encadrant de stage / entreprise\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Résumé général}
+
+L'objectif de la version actuelle du projet Oil Kam est de proposer une première application web fonctionnelle pour accompagner la gestion quotidienne d'une station-service. L'application permet déjà de couvrir les principaux axes du cahier des charges : authentification, rôles utilisateurs, tableaux de bord, tâches quotidiennes, pertes de marchandises, formations internes, rapports et administration.
+
+Cette version peut être considérée comme une base fonctionnelle démontrable parce qu'elle ne se limite pas à des maquettes statiques. Elle contient une vraie logique applicative : un serveur web, une base SQLite, des comptes de démonstration, des formulaires, des validations, des calculs automatiques et des règles d'accès selon le rôle de l'utilisateur. Elle peut donc être lancée localement, testée par différents profils et utilisée comme support concret pour valider les choix fonctionnels avec l'entreprise.
+
+Il est toutefois important de préciser qu'il ne s'agit pas encore d'une version finale. La version actuelle est une base de travail validable : elle montre la structure, les parcours principaux et les premiers modules opérationnels. Les prochaines étapes consisteront à enrichir certains modules, renforcer les rapports, préparer un déploiement et améliorer la sécurité pour un usage réel en production.
+
+\section{Fonctionnalités développées}
+
+\subsection{Authentification}
+
+Un système de connexion a été développé avec email professionnel et mot de passe. Lorsqu'un utilisateur se connecte, l'application vérifie ses identifiants dans la table \code{users}. Si les informations sont correctes, une session est créée et l'utilisateur est redirigé vers son tableau de bord.
+
+Cette fonctionnalité répond au besoin du cahier des charges de sécuriser l'accès à l'application et d'afficher un espace différent selon le rôle. Elle concerne les trois profils : \role{employé}, \role{manager} et \role{admin}.
+
+Pour tester : ouvrir \url{http://127.0.0.1:8000}, choisir un compte de démonstration sur la page de connexion ou saisir manuellement l'email et le mot de passe, puis vérifier que la redirection se fait vers le bon tableau de bord.
+
+\subsection{Comptes de démonstration}
+
+Trois comptes sont créés automatiquement au démarrage de l'application. Ils permettent de tester immédiatement les trois profils prévus dans le cahier des charges.
+
+\begin{center}
+\begin{tabular}{|p{3cm}|p{5cm}|p{3cm}|}
+\hline
+\textbf{Rôle} & \textbf{Email} & \textbf{Mot de passe} \\
+\hline
+Employé & \code{employe@oilkam.demo} & \code{oilkam123} \\
+\hline
+Manager & \code{manager@oilkam.demo} & \code{oilkam123} \\
+\hline
+Admin & \code{admin@oilkam.demo} & \code{oilkam123} \\
+\hline
+\end{tabular}
+\end{center}
+
+Ces comptes répondent au besoin de démonstration rapide en réunion. Ils évitent de devoir créer manuellement des utilisateurs avant de présenter l'application.
+
+\subsection{Gestion des rôles}
+
+L'application distingue trois rôles : employé, manager et administrateur. Chaque rôle possède des accès différents :
+
+\begin{itemize}
+  \item l'\role{employé} consulte ses tâches, valide ses tâches, déclare des pertes et suit ses formations ;
+  \item le \role{manager} suit l'activité, crée des tâches, consulte l'historique, les pertes et les rapports ;
+  \item l'\role{admin} dispose des droits de gestion : utilisateurs, produits, formations, tâches, pertes et rapports.
+\end{itemize}
+
+Cette gestion répond au besoin du cahier des charges de contrôler les droits selon les responsabilités dans la station-service. Pour tester, il suffit de se connecter successivement avec les trois comptes et de comparer les menus accessibles.
+
+\subsection{Tableau de bord employé}
+
+Le tableau de bord employé affiche les tâches du jour, la progression personnelle et des raccourcis vers les pertes et les formations. L'interface met en avant les informations opérationnelles utiles à un employé sur le terrain : ce qu'il doit faire, ce qui est terminé et ce qui reste à traiter.
+
+Cette fonctionnalité répond au besoin de remplacer les check-lists papier par un tableau de bord simple. Elle concerne principalement le rôle \role{employé}.
+
+Pour tester : se connecter avec \code{employe@oilkam.demo}, consulter la liste des tâches, ajouter un commentaire et cliquer sur le bouton de validation d'une tâche.
+
+\subsection{Tableau de bord manager}
+
+Le tableau de bord manager donne une vision plus globale : avancement des employés, nombre de tâches validées, tâches en retard, création de nouvelles tâches, accès aux pertes, à l'historique et aux rapports.
+
+Cette fonctionnalité répond au besoin de suivi opérationnel en temps réel. Elle concerne le rôle \role{manager}, mais certaines fonctions sont aussi accessibles à l'\role{admin}.
+
+Pour tester : se connecter avec \code{manager@oilkam.demo}, vérifier les statistiques, créer une tâche, consulter l'historique et accéder aux rapports.
+
+\subsection{Tableau de bord administrateur}
+
+Le tableau de bord administrateur présente les comptes utilisateurs, l'état général de la configuration et des raccourcis vers les écrans de gestion. L'admin peut gérer les utilisateurs, les produits, les modules de formation et les tâches.
+
+Cette fonctionnalité répond au besoin d'administration et de paramétrage de l'application. Elle concerne uniquement le rôle \role{admin}.
+
+Pour tester : se connecter avec \code{admin@oilkam.demo}, ouvrir les pages \code{/admin/users}, \code{/admin/products} et \code{/admin/training}.
+
+\subsection{Module tâches quotidiennes}
+
+Le module tâches permet de définir les tâches à réaliser dans la station-service. Chaque tâche possède un titre, une description, une fréquence, un responsable éventuel, une heure limite et un statut actif/inactif.
+
+Cette fonctionnalité répond directement au besoin de digitaliser les tâches quotidiennes. Elle concerne :
+
+\begin{itemize}
+  \item l'\role{employé}, qui consulte et valide ses tâches ;
+  \item le \role{manager}, qui crée et suit les tâches ;
+  \item l'\role{admin}, qui peut aussi gérer les tâches.
+\end{itemize}
+
+Pour tester : côté manager ou admin, créer une nouvelle tâche depuis le tableau de bord. Côté employé, vérifier que la tâche apparaît si elle est assignée ou commune à l'équipe.
+
+\subsection{Validation d'une tâche avec commentaire}
+
+Un employé peut valider une tâche lorsqu'elle est effectuée. Il peut ajouter un commentaire optionnel. La validation est enregistrée dans la table \code{task\_completions} avec la date, l'heure, l'utilisateur et le commentaire.
+
+Cette fonctionnalité répond au besoin de tracer les actions réalisées, au lieu d'une simple case cochée sur papier. Elle concerne surtout l'\role{employé}, tandis que le \role{manager} consulte ensuite l'historique.
+
+Pour tester : se connecter comme employé, saisir un commentaire dans une tâche non complétée, cliquer sur \og Tâche effectuée \fg{}, puis se connecter comme manager et consulter l'historique.
+
+\subsection{Création de tâche par manager/admin}
+
+Le manager et l'admin peuvent créer une nouvelle tâche avec titre, description, fréquence, responsable et heure limite. Cette fonctionnalité permet d'adapter le planning opérationnel de la station.
+
+Elle répond au besoin de pilotage par le responsable de station. Elle concerne les rôles \role{manager} et \role{admin}.
+
+Pour tester : se connecter comme manager ou admin, utiliser le formulaire \og Nouvelle tâche \fg{}, enregistrer la tâche, puis vérifier qu'elle apparaît dans la liste des tâches suivies.
+
+\subsection{Suivi de l'avancement}
+
+L'application calcule l'avancement des tâches à partir du nombre de tâches complétées et du nombre total de tâches actives. Le manager dispose d'indicateurs visuels et de barres de progression par employé.
+
+Cette fonctionnalité répond au besoin de suivi en temps réel de l'activité. Elle concerne principalement le \role{manager}, mais l'\role{admin} peut aussi l'utiliser.
+
+Pour tester : valider une tâche avec l'employé, puis revenir sur le tableau de bord manager et vérifier que les statistiques changent.
+
+\subsection{Module pertes}
+
+Un module pertes est présent dans la version actuelle. Il permet de déclarer une perte avec produit, quantité, motif, date et commentaire. La valeur est calculée automatiquement à partir du prix unitaire du produit. Le manager et l'admin peuvent consulter toutes les pertes et exporter un CSV.
+
+Cette fonctionnalité répond au besoin du cahier des charges de suivre les pertes de marchandises : casse, vol, péremption ou autre motif. Elle concerne l'\role{employé} pour la déclaration, et le \role{manager}/\role{admin} pour le suivi.
+
+Pour tester : se connecter comme employé, aller dans \og Pertes \fg{}, déclarer une perte, puis se connecter comme manager et consulter le tableau des pertes.
+
+\subsection{Module formation}
+
+Le module formation contient des modules de démonstration, du contenu texte, un quiz de validation, un score et une attestation HTML imprimable lorsque la formation est validée.
+
+Cette fonctionnalité répond au besoin d'accompagner les nouveaux employés et de suivre leur progression. Elle concerne l'\role{employé} pour le suivi et la validation, le \role{manager} pour la consultation de progression, et l'\role{admin} pour la gestion des modules.
+
+Pour tester : se connecter comme employé, ouvrir \og Formations \fg{}, lire un module, répondre au quiz et imprimer l'attestation si le score est suffisant.
+
+\subsection{Interface en français}
+
+L'ensemble de l'interface est rédigé en français : menus, boutons, formulaires, tableaux, messages d'erreur et libellés. Cela répond à la contrainte du cahier des charges d'avoir une application simple, compréhensible et utilisable par des employés sans compétence informatique avancée.
+
+Pour tester : naviguer dans l'application avec les trois rôles et vérifier que les écrans principaux restent en français.
+
+\subsection{Données de test}
+
+Des données de test sont créées automatiquement : utilisateurs, tâches, produits et modules de formation. Elles permettent d'avoir immédiatement du contenu à présenter.
+
+Cette fonctionnalité répond au besoin de démonstration rapide. Elle concerne tous les profils, car chaque rôle peut tester un parcours sans préparation manuelle.
+
+\section{Architecture technique}
+
+\subsection{Structure des dossiers}
+
+\begin{verbatim}
+app/
+  __init__.py
+  database.py
+  server.py
+  static/
+    app.js
+    styles.css
+data/
+  .gitkeep
+  oilkam.db
+docs/
+  architecture.md
+  recapitulatif_oil_kam.tex
+tests/
+  test_smoke.py
+.gitignore
+README.md
+\end{verbatim}
+
+\subsection{Rôle des fichiers importants}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Fichier} & \textbf{Rôle} \\
+\hline
+\code{app/server.py} & Contient le serveur web, les routes HTTP, les contrôles d'accès, les formulaires et les vues HTML générées côté serveur. \\
+\hline
+\code{app/database.py} & Crée le schéma SQLite, initialise les données de démonstration, contient les fonctions métier testables comme la création de perte, la gestion utilisateur et la validation de formation. \\
+\hline
+\code{app/static/styles.css} & Définit le design de l'application : tableaux de bord, cartes, formulaires, pages imprimables et responsive PC/tablette. \\
+\hline
+\code{app/static/app.js} & Ajoute une aide côté interface pour remplir rapidement les comptes de démonstration. \\
+\hline
+\code{tests/test\_smoke.py} & Vérifie les principaux comportements : comptes, tâches, pertes, produits, formations, permissions. \\
+\hline
+\code{README.md} & Documente l'installation, les comptes, les parcours à tester et les limites. \\
+\hline
+\end{longtable}
+
+\subsection{Fonctionnement du serveur}
+
+Le serveur est lancé avec la commande \code{python -m app.server}. Il utilise le module standard Python \code{http.server}. À chaque requête, le serveur analyse l'URL, vérifie la session utilisateur si nécessaire, applique les règles de rôle, lit ou écrit dans SQLite, puis renvoie une page HTML.
+
+\subsection{Choix de SQLite}
+
+SQLite a été choisi pour garder le projet simple et facilement démontrable. Il ne nécessite pas de serveur de base de données séparé. Le fichier \code{data/oilkam.db} est créé automatiquement au lancement. Ce choix est adapté pour une première version locale, une démonstration et un prototype de stage.
+
+\subsection{Lien entre interface, serveur et base de données}
+
+L'utilisateur interagit avec des pages HTML. Les formulaires envoient des requêtes au serveur. Le serveur vérifie les droits de l'utilisateur, exécute les opérations nécessaires dans SQLite, puis renvoie une page mise à jour. La base de données conserve les comptes, les tâches, les validations, les produits, les pertes et les formations.
+
+\section{Base de données}
+
+\subsection{Table \code{users}}
+
+La table \code{users} stocke les comptes utilisateurs. Ses colonnes principales sont : \code{id}, \code{name}, \code{email}, \code{password\_hash}, \code{role}, \code{active}, \code{created\_at}. Elle est utilisée pour l'authentification, la gestion des rôles et l'administration des comptes.
+
+\subsection{Table \code{tasks}}
+
+La table \code{tasks} définit les tâches à réaliser. Ses colonnes principales sont : \code{id}, \code{title}, \code{description}, \code{frequency}, \code{responsible\_user\_id}, \code{due\_time}, \code{created\_by}, \code{active}. Elle est utilisée dans les tableaux de bord employé, manager et admin.
+
+\subsection{Table \code{task\_completions}}
+
+La table \code{task\_completions} enregistre les validations de tâches. Ses colonnes principales sont : \code{task\_id}, \code{user\_id}, \code{completion\_date}, \code{completed\_at}, \code{comment}. Elle permet de suivre l'historique et l'avancement.
+
+\subsection{Table \code{products}}
+
+La table \code{products} stocke les produits utilisés dans le module pertes. Ses colonnes principales sont : \code{name}, \code{category}, \code{unit\_price}, \code{unit}, \code{active}. Elle est utilisée pour alimenter le formulaire de déclaration de perte et calculer automatiquement la valeur perdue.
+
+\subsection{Table \code{losses}}
+
+La table \code{losses} stocke les pertes déclarées. Ses colonnes principales sont : \code{product\_id}, \code{quantity}, \code{motive}, \code{loss\_date}, \code{user\_id}, \code{value}, \code{comment}. Elle est utilisée dans le suivi des pertes, les statistiques et l'export CSV.
+
+\subsection{Tables de formation}
+
+Les tables \code{training\_modules}, \code{training\_quizzes}, \code{training\_progress} et \code{training\_certificates} gèrent les formations. Elles stockent les contenus, les questions de quiz, la progression des employés, les scores et les attestations validées.
+
+\section{Comment lancer et tester l'application}
+
+\subsection{Commande de lancement}
+
+\begin{verbatim}
+cd "D:\Documents\stage oil kam"
+python -m app.server
+\end{verbatim}
+
+\subsection{Adresse locale}
+
+\begin{center}
+\url{http://127.0.0.1:8000}
+\end{center}
+
+\subsection{Comptes de démonstration}
+
+\begin{center}
+\begin{tabular}{|p{3cm}|p{5cm}|p{3cm}|}
+\hline
+\textbf{Rôle} & \textbf{Email} & \textbf{Mot de passe} \\
+\hline
+Employé & \code{employe@oilkam.demo} & \code{oilkam123} \\
+\hline
+Manager & \code{manager@oilkam.demo} & \code{oilkam123} \\
+\hline
+Admin & \code{admin@oilkam.demo} & \code{oilkam123} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Scénarios de test}
+
+\subsubsection*{Employé}
+
+Se connecter avec le compte employé, consulter les tâches du jour, valider une tâche avec commentaire, déclarer une perte, ouvrir une formation, répondre au quiz et générer une attestation si la formation est validée.
+
+\subsubsection*{Manager}
+
+Se connecter avec le compte manager, consulter les statistiques, créer une tâche, vérifier l'historique, consulter les pertes, exporter un CSV, ouvrir les rapports et suivre la progression des formations.
+
+\subsubsection*{Administrateur}
+
+Se connecter avec le compte admin, gérer les utilisateurs, gérer les produits, gérer les modules de formation, consulter les rapports et vérifier que les fonctionnalités sensibles ne sont pas accessibles aux autres rôles.
+
+\section{Limites actuelles}
+
+La version actuelle est démontrable et fonctionnelle, mais elle reste une base de travail. Les principales limites sont les suivantes :
+
+\begin{itemize}
+  \item le module pertes existe, mais peut être enrichi avec des analyses plus avancées, des graphiques et une gestion plus complète des catégories ;
+  \item le module formation existe, mais ne contient qu'une question par module pour rester simple ;
+  \item l'export Excel natif n'est pas encore ajouté afin d'éviter une dépendance supplémentaire ; le CSV reste compatible avec Excel ;
+  \item les rapports PDF sont gérés par impression navigateur, pas par génération PDF serveur ;
+  \item la gestion des utilisateurs est fonctionnelle, mais pourrait être complétée par un journal d'audit ;
+  \item l'application n'est pas encore déployée sur un serveur de production ;
+  \item la sécurité est suffisante pour une démonstration locale, mais devrait être renforcée pour un usage réel : configuration externe, sessions persistantes, politique de mots de passe, HTTPS, sauvegardes.
+\end{itemize}
+
+\section{Étapes à venir}
+
+\subsection*{Étape 1 : stabilisation}
+
+Corriger les retours de démonstration, améliorer les messages utilisateur, vérifier les parcours principaux et nettoyer les éventuelles incohérences d'interface.
+
+\subsection*{Étape 2 : amélioration du module tâches}
+
+Ajouter des filtres plus avancés, améliorer l'historique, ajouter des vues par période et préparer des rapports plus détaillés par employé.
+
+\subsection*{Étape 3 : développement du module pertes}
+
+Enrichir les statistiques, ajouter des regroupements par catégorie, préparer des graphiques, valider les motifs avec l'entreprise et améliorer les exports.
+
+\subsection*{Étape 4 : développement du module formation}
+
+Ajouter plusieurs questions par module, améliorer les scores, gérer les attestations de manière plus complète et prévoir une validation manager si nécessaire.
+
+\subsection*{Étape 5 : exports, tests, documentation et déploiement}
+
+Ajouter des exports Excel/PDF si l'entreprise valide les dépendances, renforcer les tests, préparer une documentation utilisateur et prévoir un déploiement sur un environnement interne.
+
+\section{Script oral pour la réunion}
+
+Voici un court discours utilisable pour présenter la version actuelle :
+
+\begin{quote}
+Bonjour, aujourd'hui je vous présente la version actuelle de l'application Oil Kam. L'objectif de cette application est de digitaliser la gestion quotidienne d'une station-service, en remplaçant progressivement les suivis manuels par un outil web simple et structuré.
+
+La version développée constitue une première base fonctionnelle et démontrable. Elle comprend une authentification avec trois rôles : employé, manager et administrateur. Chaque rôle dispose d'un tableau de bord adapté. L'employé peut consulter ses tâches, les valider avec un commentaire, déclarer des pertes et suivre ses formations. Le manager peut suivre l'avancement, créer des tâches, consulter les pertes, accéder à l'historique et visualiser des rapports. L'administrateur peut gérer les utilisateurs, les produits et les modules de formation.
+
+Techniquement, l'application fonctionne avec un serveur Python simple et une base SQLite, ce qui permet de la lancer facilement en local pour la démonstration. Les données de test sont créées automatiquement, ce qui permet de tester les parcours sans préparation complexe.
+
+Cette version n'est pas encore une version finale. Elle sert surtout de base validable pour confirmer la logique métier, les écrans prioritaires et les règles de droits. Les prochaines priorités seront de stabiliser les retours de démonstration, enrichir les modules pertes et formation, améliorer les exports, puis préparer une version plus robuste pour un usage réel.
+\end{quote}
+
+\section*{Conclusion}
+
+La version actuelle du projet Oil Kam est une base solide pour la suite du stage. Elle permet de montrer concrètement les parcours principaux attendus par le cahier des charges et de recueillir des retours de l'entreprise avant d'investir davantage dans les fonctionnalités avancées. La priorité est maintenant de valider cette base avec l'encadrant, puis de poursuivre le développement par itérations.
+
+\end{document}
