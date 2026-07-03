@@ -4,6 +4,10 @@ Application web de démonstration pour une station-service Oil Kam. Elle couvre 
 
 La version actuelle est une base fonctionnelle et présentable : elle privilégie la stabilité, la simplicité et la lisibilité du code. Elle utilise Python standard et SQLite, sans framework ni dépendance externe.
 
+## Objectif
+
+L'objectif de l'application est de fournir une base de gestion simple pour une station-service Oil Kam : suivi des tâches quotidiennes, déclaration des pertes, formations internes, rapports et gestion des accès selon les rôles.
+
 ## Fonctionnalités disponibles
 
 ### Authentification et rôles
@@ -90,7 +94,7 @@ La version actuelle est une base fonctionnelle et présentable : elle privilégi
 Prérequis : Python 3.11 ou plus récent.
 
 ```powershell
-cd "D:\Documents\stage oil kam"
+cd oilkam-station-management
 python -m app.server
 ```
 
@@ -123,7 +127,7 @@ Conséquences importantes :
 Terminal 1 :
 
 ```powershell
-cd "D:\Documents\stage oil kam"
+cd oilkam-station-management
 python -m app.server
 ```
 
@@ -146,7 +150,7 @@ C'est ce lien HTTPS qu'il faut envoyer au tuteur avec les comptes de démonstrat
 Terminal 1 :
 
 ```powershell
-cd "D:\Documents\stage oil kam"
+cd oilkam-station-management
 python -m app.server
 ```
 
