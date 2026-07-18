@@ -137,7 +137,7 @@ class OilKamSmokeTests(unittest.TestCase):
                     update_user(
                         conn,
                         user_id=admin_id,
-                        name="Nadia Admin",
+                        name="Admin Démo",
                         email="admin@oilkam.demo",
                         role="admin",
                         active=0,

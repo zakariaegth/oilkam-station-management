@@ -99,7 +99,7 @@ L'objectif de l'application est de fournir une base de gestion simple pour une s
 
 ### Interface et PWA
 
-- Page de connexion simplifiée, sans affichage public des comptes de démonstration.
+- Page de connexion plein écran, sans affichage public des comptes de démonstration.
 - Charte visuelle sobre : jaune, gris, noir et blanc.
 - Navigation basse adaptée mobile/tablette.
 - Manifest PWA et service worker simple.
@@ -123,6 +123,38 @@ http://127.0.0.1:8000
 La base SQLite est créée automatiquement dans `data/oilkam.db`.
 
 ## Mise en ligne / Démonstration à distance
+
+### Accès depuis un téléphone sur le même Wi-Fi
+
+Cette solution fonctionne si le PC et le téléphone sont connectés au même réseau Wi-Fi.
+
+Lancer le serveur en écoutant sur le réseau local :
+
+```powershell
+python -m app.server --host 0.0.0.0 --port 8000
+```
+
+Trouver l'adresse IP locale du PC :
+
+```powershell
+ipconfig
+```
+
+Chercher la ligne `Adresse IPv4`, par exemple `192.168.1.25`.
+
+Depuis le téléphone, ouvrir :
+
+```text
+http://ADRESSE_IP_DU_PC:8000
+```
+
+Exemple :
+
+```text
+http://192.168.1.25:8000
+```
+
+Si la page ne s'ouvre pas, Windows peut bloquer le port. Il faut autoriser Python dans le pare-feu Windows pour les réseaux privés.
 
 ### Solution recommandée pour une démonstration rapide
 

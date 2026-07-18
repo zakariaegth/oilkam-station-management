@@ -176,12 +176,23 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
     ensure_column(conn, "training_modules", "content", "TEXT NOT NULL DEFAULT ''")
     ensure_column(conn, "training_progress", "score", "INTEGER")
     ensure_column(conn, "training_progress", "validated_at", "TEXT")
+    normalize_demo_user_names(conn)
 
 
 def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
     columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     if column not in columns:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def normalize_demo_user_names(conn: sqlite3.Connection) -> None:
+    demo_names = {
+        "employe@oilkam.demo": "Employé Démo",
+        "manager@oilkam.demo": "Manager Démo",
+        "admin@oilkam.demo": "Admin Démo",
+    }
+    for email, name in demo_names.items():
+        conn.execute("UPDATE users SET name = ? WHERE email = ?", (name, email))
 
 
 def seed_demo_data(conn: sqlite3.Connection) -> None:
@@ -194,9 +205,9 @@ def seed_demo_data(conn: sqlite3.Connection) -> None:
 
 def seed_users(conn: sqlite3.Connection, now: str) -> None:
     users = [
-        ("Amine Employé", "employe@oilkam.demo", "employe"),
-        ("Sara Manager", "manager@oilkam.demo", "manager"),
-        ("Nadia Admin", "admin@oilkam.demo", "admin"),
+        ("Employé Démo", "employe@oilkam.demo", "employe"),
+        ("Manager Démo", "manager@oilkam.demo", "manager"),
+        ("Admin Démo", "admin@oilkam.demo", "admin"),
     ]
     for name, email, role in users:
         conn.execute(

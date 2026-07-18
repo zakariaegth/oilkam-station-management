@@ -539,7 +539,14 @@ class OilKamHandler(BaseHTTPRequestHandler):
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {self.address_string()} {format % args}")
 
 
-def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
+def layout(
+    title: str,
+    body: str,
+    user: sqlite3.Row | None = None,
+    *,
+    page_class: str = "",
+    body_class: str = "",
+) -> str:
     name = esc(user["name"]) if user else ""
     role = ROLE_LABELS.get(user["role"], "") if user else ""
     nav = ""
@@ -600,9 +607,9 @@ def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
   <link rel="icon" href="/static/icons/icon-192.svg" type="image/svg+xml">
   <script defer src="/static/app.js"></script>
 </head>
-<body>
+<body class="{esc(body_class)}">
   {nav}
-  <main class="page">
+  <main class="page {esc(page_class)}">
     {body}
   </main>
   {bottom_nav}
@@ -614,20 +621,24 @@ def login_page(error: str = "") -> str:
     alert = f'<p class="alert">{esc(error)}</p>' if error else ""
     body = f"""
     <section class="login-shell">
-      <div class="login-card login-card-simple">
+      <aside class="login-intro" aria-label="Presentation Oil Kam">
+        <div class="login-intro-inner">
+          <span class="brand-mark large">OK</span>
+          <div>
+            <p class="eyebrow">Oil Kam</p>
+            <h1>Espace de gestion interne</h1>
+            <p>Acc&eacute;dez &agrave; votre espace de gestion Oil Kam.</p>
+          </div>
+        </div>
+      </aside>
+      <div class="login-form-zone">
         <div class="login-panel">
           <div class="login-heading">
-            <div class="brand-block">
-              <span class="brand-mark large">OK</span>
-              <div>
-                <p class="eyebrow">Oil Kam</p>
-                <h1>Connexion</h1>
-              </div>
-            </div>
-            <p>Accédez à votre espace de gestion Oil Kam.</p>
+            <p class="eyebrow">Connexion s&eacute;curis&eacute;e</p>
+            <h2>Connexion</h2>
           </div>
           {alert}
-          <form class="form-stack" method="post" action="/login">
+          <form class="form-stack login-form" method="post" action="/login">
             <label>Email professionnel
               <input name="email" type="email" autocomplete="username" required autofocus>
             </label>
@@ -640,7 +651,7 @@ def login_page(error: str = "") -> str:
       </div>
     </section>
     """
-    return layout("Connexion", body)
+    return layout("Connexion", body, page_class="page-login", body_class="login-body")
 
 
 def dashboard_page(user: sqlite3.Row, error: str = "") -> str:
