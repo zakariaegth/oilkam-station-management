@@ -24,6 +24,7 @@ from .database import (
     get_connection,
     hash_password,
     init_db,
+    record_attendance,
     reset_user_password,
     update_user,
     upsert_product,
@@ -69,6 +70,12 @@ class OilKamHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/manifest.json":
+            self.serve_static("/static/manifest.json")
+            return
+        if path == "/service-worker.js":
+            self.serve_static("/static/service-worker.js")
+            return
         if path.startswith("/static/"):
             self.serve_static(path)
             return
@@ -80,12 +87,16 @@ class OilKamHandler(BaseHTTPRequestHandler):
             self.respond_html(login_page(self.query_param("erreur")))
         elif path == "/dashboard":
             self.require_user(user, lambda: self.respond_html(dashboard_page(user, self.query_param("erreur"))))
+        elif path == "/tasks":
+            self.require_user(user, lambda: self.respond_html(tasks_page(user)))
         elif path == "/tasks/history":
             self.require_roles(
                 user,
                 {"manager", "admin"},
                 lambda: self.respond_html(task_history_page(user, self.query_params())),
             )
+        elif path in {"/attendance", "/pointage"}:
+            self.require_user(user, lambda: self.respond_html(attendance_page(user, self.query_params())))
         elif path == "/losses":
             self.require_user(user, lambda: self.respond_html(losses_page(user, self.query_params())))
         elif path == "/losses/export":
@@ -124,6 +135,8 @@ class OilKamHandler(BaseHTTPRequestHandler):
             self.require_roles(user, {"manager", "admin"}, lambda: self.update_task(form))
         elif path == "/tasks/deactivate":
             self.require_roles(user, {"manager", "admin"}, lambda: self.deactivate_task(form))
+        elif path in {"/attendance/record", "/pointage/record"}:
+            self.require_user(user, lambda: self.record_attendance_action(user, form))
         elif path == "/losses/create":
             self.require_user(user, lambda: self.create_loss(user, form))
         elif path == "/admin/users/create":
@@ -285,6 +298,19 @@ class OilKamHandler(BaseHTTPRequestHandler):
             with get_connection() as conn:
                 conn.execute("UPDATE tasks SET active = 0 WHERE id = ?", (task_id,))
         redirect(self, "/dashboard")
+
+    def record_attendance_action(self, user: sqlite3.Row, form: dict[str, str]) -> None:
+        if user["role"] != "employe":
+            redirect(self, "/pointage?erreur=" + quote("Le pointage est réservé aux employés."))
+            return
+        event_type = form.get("event_type", "")
+        try:
+            with get_connection() as conn:
+                record_attendance(conn, user_id=user["id"], event_type=event_type)
+        except ValueError as exc:
+            redirect(self, "/pointage?erreur=" + quote(str(exc)))
+            return
+        redirect(self, "/pointage")
 
     def create_loss(self, user: sqlite3.Row, form: dict[str, str]) -> None:
         try:
@@ -486,9 +512,17 @@ class OilKamHandler(BaseHTTPRequestHandler):
         if not str(target).startswith(str(STATIC_DIR.resolve())) or not target.exists():
             self.not_found()
             return
-        content_type = "text/css" if target.suffix == ".css" else "application/javascript"
+        content_types = {
+            ".css": "text/css",
+            ".js": "application/javascript",
+            ".json": "application/manifest+json",
+            ".svg": "image/svg+xml",
+        }
+        content_type = content_types.get(target.suffix, "application/octet-stream")
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type + "; charset=utf-8")
+        if path == "/static/service-worker.js":
+            self.send_header("Service-Worker-Allowed", "/")
         self.end_headers()
         self.wfile.write(target.read_bytes())
 
@@ -509,12 +543,20 @@ def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
     name = esc(user["name"]) if user else ""
     role = ROLE_LABELS.get(user["role"], "") if user else ""
     nav = ""
+    bottom_nav = ""
     if user:
         history_link = '<a href="/tasks/history">Historique</a>' if user["role"] in {"manager", "admin"} else ""
         reports_link = '<a href="/reports">Rapports</a>' if user["role"] in {"manager", "admin"} else ""
         admin_links = ""
         if user["role"] == "admin":
             admin_links = '<a href="/admin/users">Utilisateurs</a><a href="/admin/products">Produits</a><a href="/admin/training">Modules</a>'
+        primary_links = """
+            <a href="/dashboard" data-route="home">Accueil</a>
+            <a href="/tasks" data-route="tasks">Tâches</a>
+            <a href="/training" data-route="training">Formation</a>
+            <a href="/pointage" data-route="attendance">Pointage</a>
+            <a href="/losses" data-route="losses">Pertes</a>
+        """
         nav = f"""
         <header class="topbar">
           <a class="brand" href="/dashboard">
@@ -525,9 +567,7 @@ def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
             </span>
           </a>
           <nav class="nav-links" aria-label="Navigation principale">
-            <a href="/dashboard">Tableau de bord</a>
-            <a href="/losses">Pertes</a>
-            <a href="/training">Formations</a>
+            {primary_links}
             {history_link}
             {reports_link}
             {admin_links}
@@ -542,13 +582,22 @@ def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
           </div>
         </header>
         """
+        bottom_nav = f"""
+        <nav class="bottom-nav" aria-label="Navigation mobile">
+          {primary_links}
+        </nav>
+        """
     return f"""<!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <meta name="description" content="Application interne de gestion Oil Kam">
   <title>{esc(title)} - Oil Kam</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/static/icons/icon-192.svg" type="image/svg+xml">
   <script defer src="/static/app.js"></script>
 </head>
 <body>
@@ -556,6 +605,7 @@ def layout(title: str, body: str, user: sqlite3.Row | None = None) -> str:
   <main class="page">
     {body}
   </main>
+  {bottom_nav}
 </body>
 </html>"""
 
@@ -564,26 +614,17 @@ def login_page(error: str = "") -> str:
     alert = f'<p class="alert">{esc(error)}</p>' if error else ""
     body = f"""
     <section class="login-shell">
-      <div class="login-card">
-        <div class="login-intro">
-          <div class="brand-block">
-            <span class="brand-mark large">OK</span>
-            <div>
-              <p class="eyebrow">Station-service</p>
-              <h1>Oil Kam</h1>
-            </div>
-          </div>
-          <p class="login-lead">Pilotage quotidien des tâches, des équipes et des opérations de station.</p>
-          <div class="login-metrics">
-            <div><strong>3</strong><span>Rôles</span></div>
-            <div><strong>5</strong><span>Tâches test</span></div>
-            <div><strong>V1</strong><span>Démo</span></div>
-          </div>
-        </div>
+      <div class="login-card login-card-simple">
         <div class="login-panel">
-          <div>
-            <p class="eyebrow">Accès sécurisé</p>
-            <h2>Connexion</h2>
+          <div class="login-heading">
+            <div class="brand-block">
+              <span class="brand-mark large">OK</span>
+              <div>
+                <p class="eyebrow">Oil Kam</p>
+                <h1>Connexion</h1>
+              </div>
+            </div>
+            <p>Accédez à votre espace de gestion Oil Kam.</p>
           </div>
           {alert}
           <form class="form-stack" method="post" action="/login">
@@ -595,13 +636,6 @@ def login_page(error: str = "") -> str:
             </label>
             <button class="primary-button" type="submit">Se connecter</button>
           </form>
-          <div class="demo-accounts">
-            <p>Comptes de démonstration</p>
-            <button type="button" data-fill-login="employe@oilkam.demo">Employé</button>
-            <button type="button" data-fill-login="manager@oilkam.demo">Manager</button>
-            <button type="button" data-fill-login="admin@oilkam.demo">Admin</button>
-            <span>Mot de passe : oilkam123</span>
-          </div>
         </div>
       </div>
     </section>
@@ -635,6 +669,183 @@ def load_tasks_for_user(user_id: int) -> list[sqlite3.Row]:
             """,
             (user_id, today_iso(), user_id),
         ).fetchall()
+
+
+def load_all_tasks_today() -> list[sqlite3.Row]:
+    with get_connection() as conn:
+        return conn.execute(
+            """
+            SELECT t.*, u.name AS responsible_name, c.completed_at, c.comment
+            FROM tasks t
+            LEFT JOIN users u ON u.id = t.responsible_user_id
+            LEFT JOIN task_completions c ON c.task_id = t.id AND c.completion_date = ?
+            WHERE t.active = 1
+            ORDER BY t.due_time, t.id
+            """,
+            (today_iso(),),
+        ).fetchall()
+
+
+def tasks_page(user: sqlite3.Row) -> str:
+    if user["role"] == "employe":
+        tasks = load_tasks_for_user(user["id"])
+        can_complete = True
+        side_content = """
+        <p class="section-kicker">Raccourcis</p>
+        <h2>Actions utiles</h2>
+        <a class="quick-action" href="/pointage"><span class="action-mark"></span><strong>Pointage</strong><small>Arrivée et départ</small></a>
+        <a class="quick-action" href="/losses"><span class="action-mark"></span><strong>Pertes</strong><small>Déclarer une perte</small></a>
+        """
+    else:
+        tasks = load_all_tasks_today()
+        can_complete = False
+        side_content = task_form()
+    completed = sum(1 for task in tasks if task["completed_at"])
+    total = len(tasks)
+    progress = int((completed / total) * 100) if total else 0
+    task_items = "\n".join(task_card(task, can_complete=can_complete) for task in tasks)
+    if not task_items:
+        task_items = '<p class="empty-state">Aucune tâche active pour aujourd’hui.</p>'
+    management = ""
+    if user["role"] in {"manager", "admin"}:
+        management = f"""
+        <div class="panel">
+          <div class="section-head">
+            <div><p class="section-kicker">Gestion</p><h2>Modifier les tâches</h2></div>
+            <a class="text-link" href="/tasks/history">Historique</a>
+          </div>
+          {task_admin_list(tasks)}
+        </div>
+        """
+    return layout(
+        "Tâches",
+        f"""
+        <section class="hero-band dashboard-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Tâches</p>
+            <h1>Suivi des tâches</h1>
+            <p>Liste du jour, validation terrain et gestion des tâches actives.</p>
+          </div>
+          <div class="progress-tile">
+            <span>{completed}/{total}</span>
+            <small>Validées</small>
+          </div>
+        </section>
+        <section class="content-grid">
+          <div class="main-column">
+            <div class="panel">
+              <div class="section-head">
+                <div><p class="section-kicker">Aujourd’hui</p><h2>Tâches du jour</h2></div>
+                <span class="meter"><span style="width:{progress}%"></span></span>
+              </div>
+              <div class="task-list">{task_items}</div>
+            </div>
+            {management}
+          </div>
+          <aside class="side-panel">{side_content}</aside>
+        </section>
+        """,
+        user,
+    )
+
+
+def attendance_event_label(event_type: str) -> str:
+    return "Arrivée" if event_type == "arrivee" else "Départ"
+
+
+def attendance_page(user: sqlite3.Row, params: dict[str, str]) -> str:
+    error = params.get("erreur", "")
+    where = "a.attendance_date = ?"
+    sql_params: list[object] = [today_iso()]
+    if user["role"] == "employe":
+        where += " AND a.user_id = ?"
+        sql_params.append(user["id"])
+    with get_connection() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT a.*, u.name AS user_name
+            FROM attendance_records a
+            JOIN users u ON u.id = a.user_id
+            WHERE {where}
+            ORDER BY a.created_at DESC, a.id DESC
+            """,
+            sql_params,
+        ).fetchall()
+    arrivals = sum(1 for row in rows if row["event_type"] == "arrivee")
+    departures = sum(1 for row in rows if row["event_type"] == "depart")
+    table_rows = "\n".join(
+        f"""
+        <tr>
+          <td>{esc(row["event_time"][:5])}</td>
+          <td>{esc(row["user_name"])}</td>
+          <td><span class="status-pill {'success' if row["event_type"] == "arrivee" else 'muted'}">{attendance_event_label(row["event_type"])}</span></td>
+        </tr>
+        """
+        for row in rows
+    )
+    if not table_rows:
+        table_rows = '<tr><td colspan="3">Aucun pointage enregistré aujourd’hui.</td></tr>'
+    employee_actions = ""
+    if user["role"] == "employe":
+        employee_actions = """
+        <section class="panel page-panel">
+          <div class="section-head">
+            <div><p class="section-kicker">Présence</p><h2>Pointer mon service</h2></div>
+          </div>
+          <div class="button-row attendance-actions">
+            <form method="post" action="/pointage/record">
+              <input type="hidden" name="event_type" value="arrivee">
+              <button class="primary-button" type="submit">Pointer l’arrivée</button>
+            </form>
+            <form method="post" action="/pointage/record">
+              <input type="hidden" name="event_type" value="depart">
+              <button class="ghost-button" type="submit">Pointer le départ</button>
+            </form>
+          </div>
+        </section>
+        """
+    else:
+        employee_actions = """
+        <section class="panel page-panel">
+          <p class="empty-state">Les managers et administrateurs consultent les pointages enregistrés par les employés.</p>
+        </section>
+        """
+    alert = f'<p class="alert page-alert">{esc(error)}</p>' if error else ""
+    return layout(
+        "Pointage",
+        f"""
+        {alert}
+        <section class="hero-band dashboard-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Pointage</p>
+            <h1>Présence du jour</h1>
+            <p>Enregistrement simple des arrivées et départs des employés.</p>
+          </div>
+          <div class="progress-tile">
+            <span>{len(rows)}</span>
+            <small>Pointages</small>
+          </div>
+        </section>
+        <section class="stat-grid">
+          <article class="stat-card"><span class="stat-label">Arrivées</span><strong>{arrivals}</strong><small>Aujourd’hui</small></article>
+          <article class="stat-card"><span class="stat-label">Départs</span><strong>{departures}</strong><small>Aujourd’hui</small></article>
+          <article class="stat-card accent"><span class="stat-label">Heure</span><strong>{current_time_label()}</strong><small>Suivi du service</small></article>
+        </section>
+        {employee_actions}
+        <section class="panel page-panel">
+          <div class="section-head">
+            <div><p class="section-kicker">Historique</p><h2>Pointages du jour</h2></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Heure</th><th>Employé</th><th>Type</th></tr></thead>
+              <tbody>{table_rows}</tbody>
+            </table>
+          </div>
+        </section>
+        """,
+        user,
+    )
 
 
 def employee_dashboard(user: sqlite3.Row) -> str:
@@ -694,7 +905,7 @@ def employee_dashboard(user: sqlite3.Row) -> str:
         <h2>Actions rapides</h2>
         <a class="quick-action" href="/losses"><span class="action-mark fuel"></span><strong>Déclarer une perte</strong><small>Formulaire rapide</small></a>
         <a class="quick-action" href="/training"><span class="action-mark safety"></span><strong>Mes formations</strong><small>Progression personnelle</small></a>
-        <a class="quick-action disabled" href="#" aria-disabled="true"><span class="action-mark history"></span><strong>Historique</strong><small>Consultation à venir</small></a>
+        <a class="quick-action" href="/pointage"><span class="action-mark history"></span><strong>Pointage</strong><small>Arrivée et départ</small></a>
       </aside>
     </section>
     """
@@ -1049,7 +1260,7 @@ def manager_alerts(tasks: list[sqlite3.Row]) -> str:
     overdue = overdue_count(tasks)
     lines = [
         f"{overdue} tâche(s) en retard" if overdue else "Aucune tâche en retard",
-        "Module pertes prévu après validation",
+        "Suivi des pertes disponible",
     ]
     return "<ul class=\"alert-list\">" + "".join(f"<li>{esc(line)}</li>" for line in lines) + "</ul>"
 
@@ -1519,7 +1730,7 @@ def admin_users_page(user: sqlite3.Row, params: dict[str, str]) -> str:
           </form>
           <form class="button-row" method="post" action="/admin/users/reset-password">
             <input type="hidden" name="user_id" value="{row["id"]}">
-            <input name="password" placeholder="Nouveau mot de passe (défaut oilkam123)">
+            <input name="password" placeholder="Nouveau mot de passe">
             <button class="ghost-button" type="submit">Réinitialiser le mot de passe</button>
           </form>
         </article>
@@ -1562,7 +1773,7 @@ def admin_users_page(user: sqlite3.Row, params: dict[str, str]) -> str:
                 <select name="active">{active_options(1)}</select>
               </label>
               <label>Mot de passe
-                <input name="password" placeholder="oilkam123 par défaut">
+                <input name="password" placeholder="Mot de passe initial">
               </label>
               <button class="primary-button" type="submit">Créer le compte</button>
             </form>
@@ -2005,7 +2216,6 @@ def run(host: str, port: int) -> None:
     server = ThreadingHTTPServer((host, port), OilKamHandler)
     print(f"Oil Kam prêt : http://{host}:{port}")
     print("Comptes : employe@oilkam.demo, manager@oilkam.demo, admin@oilkam.demo")
-    print("Mot de passe : oilkam123")
     server.serve_forever()
 
 

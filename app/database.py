@@ -92,6 +92,15 @@ def init_db(path: Path | str = DB_PATH) -> None:
                 UNIQUE(task_id, user_id, completion_date)
             );
 
+            CREATE TABLE IF NOT EXISTS attendance_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                attendance_date TEXT NOT NULL,
+                event_time TEXT NOT NULL,
+                event_type TEXT NOT NULL CHECK (event_type IN ('arrivee', 'depart')),
+                created_at TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -402,6 +411,32 @@ def create_loss(
         ),
     )
     return value
+
+
+def record_attendance(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    event_type: str,
+    moment: datetime | None = None,
+) -> int:
+    if event_type not in {"arrivee", "depart"}:
+        raise ValueError("Type de pointage invalide.")
+    current = moment or datetime.now()
+    cursor = conn.execute(
+        """
+        INSERT INTO attendance_records (user_id, attendance_date, event_time, event_type, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            current.date().isoformat(),
+            current.strftime("%H:%M:%S"),
+            event_type,
+            current.isoformat(timespec="seconds"),
+        ),
+    )
+    return int(cursor.lastrowid)
 
 
 def active_admin_count(conn: sqlite3.Connection) -> int:

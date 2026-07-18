@@ -6,7 +6,7 @@ La version actuelle est une base fonctionnelle et présentable : elle privilégi
 
 ## Objectif
 
-L'objectif de l'application est de fournir une base de gestion simple pour une station-service Oil Kam : suivi des tâches quotidiennes, déclaration des pertes, formations internes, rapports et gestion des accès selon les rôles.
+L'objectif de l'application est de fournir une base de gestion simple pour une station-service Oil Kam : suivi des tâches quotidiennes, pointage, déclaration des pertes, formations internes, rapports et gestion des accès selon les rôles.
 
 ## Fonctionnalités disponibles
 
@@ -35,6 +35,14 @@ L'objectif de l'application est de fournir une base de gestion simple pour une s
 - Modification ou désactivation des tâches par manager/admin.
 - Historique filtrable par date et employé.
 - Statistiques d'avancement dans le tableau de bord manager.
+
+### Module pointage
+
+- Page dédiée `/pointage`.
+- Pointage d'arrivée et de départ pour les employés.
+- Historique du jour.
+- Consultation des pointages par manager/admin.
+- Enregistrement en SQLite : utilisateur, date, heure et type de pointage.
 
 ### Module pertes
 
@@ -88,6 +96,14 @@ L'objectif de l'application est de fournir une base de gestion simple pour une s
 - Rapport imprimable de progression des formations.
 - Bouton d'impression navigateur.
 - Export CSV conservé pour les pertes.
+
+### Interface et PWA
+
+- Page de connexion simplifiée, sans affichage public des comptes de démonstration.
+- Charte visuelle sobre : jaune, gris, noir et blanc.
+- Navigation basse adaptée mobile/tablette.
+- Manifest PWA et service worker simple.
+- Icônes applicatives préparées dans `app/static/icons/`.
 
 ## Lancer l'application
 
@@ -210,9 +226,10 @@ Les tests couvrent :
 1. Se connecter avec `employe@oilkam.demo`.
 2. Consulter les tâches du jour.
 3. Valider une tâche avec commentaire.
-4. Aller dans `Pertes` et déclarer une perte.
-5. Aller dans `Formations`, lire un module et valider un quiz.
-6. Ouvrir l'attestation si le quiz est réussi.
+4. Aller dans `Pointage` et pointer l'arrivée ou le départ.
+5. Aller dans `Pertes` et déclarer une perte.
+6. Aller dans `Formations`, lire un module et valider un quiz.
+7. Ouvrir l'attestation si le quiz est réussi.
 
 ### Manager
 
@@ -220,9 +237,10 @@ Les tests couvrent :
 2. Consulter les statistiques du tableau de bord.
 3. Créer une tâche.
 4. Consulter l'historique des tâches.
-5. Consulter les pertes et exporter le CSV.
-6. Ouvrir `Rapports` et tester l'impression.
-7. Consulter la progression formation des employés.
+5. Consulter les pointages du jour.
+6. Consulter les pertes et exporter le CSV.
+7. Ouvrir `Rapports` et tester l'impression.
+8. Consulter la progression formation des employés.
 
 ### Admin
 
@@ -241,8 +259,11 @@ app/
   database.py       Schéma SQLite, migrations simples, données démo, helpers métier
   server.py         Serveur web, routes, permissions, vues HTML
   static/
-    app.js          Aide aux comptes de démonstration
+    app.js          Navigation active et enregistrement du service worker
+    manifest.json   Métadonnées PWA
+    service-worker.js Cache PWA simple
     styles.css      Design responsive et styles imprimables
+    icons/          Icônes PWA simples
 data/
   .gitkeep
   oilkam.db         Base locale générée automatiquement
@@ -258,7 +279,8 @@ README.md
 
 - Pas de vrai export `.xlsx` natif pour éviter d'ajouter une dépendance ; le CSV est compatible Excel.
 - Les sessions sont en mémoire : elles disparaissent au redémarrage du serveur.
-- Pas encore de déploiement production.
+- Le mode PWA reste simple et dépend du navigateur.
+- Pas encore de déploiement production avancé.
 - Pas encore de journal d'audit complet.
 - Les rapports sont simples mais imprimables.
 
@@ -266,6 +288,7 @@ README.md
 
 - Ajouter une gestion plus avancée des produits par catégorie.
 - Ajouter plusieurs questions par formation.
+- Ajouter une vue pointage par période.
 - Ajouter des exports Excel/PDF avec dépendances dédiées si l'entreprise le valide.
 - Ajouter un journal d'activité.
 - Préparer une configuration de production.

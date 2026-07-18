@@ -15,7 +15,10 @@ Oil Kam est une application web interne pour station-service. La version actuell
 - `app/database.py` : schéma, migrations simples, données de démonstration et fonctions métier testables.
 - `app/server.py` : routes HTTP, permissions, vues HTML et actions utilisateur.
 - `app/static/styles.css` : design responsive, cartes, tableaux, formulaires et impression.
-- `app/static/app.js` : confort de connexion avec les comptes de démonstration.
+- `app/static/app.js` : navigation active et enregistrement du service worker.
+- `app/static/manifest.json` : métadonnées PWA.
+- `app/static/service-worker.js` : cache PWA simple.
+- `app/static/icons/` : icônes PWA simples.
 - `data/` : base SQLite générée localement.
 - `tests/` : tests unitaires.
 
@@ -24,6 +27,7 @@ Oil Kam est une application web interne pour station-service. La version actuell
 - `users` : comptes, email, mot de passe hashé, rôle, statut.
 - `tasks` : définition des tâches, responsable, fréquence, heure limite, statut actif.
 - `task_completions` : validations de tâches par utilisateur et date.
+- `attendance_records` : pointages d'arrivée et de départ par utilisateur, date et heure.
 - `products` : catalogue produits pour pertes, catégorie, prix unitaire, unité, statut.
 - `losses` : déclarations de pertes, quantité, motif, date, déclarant, valeur calculée.
 - `training_modules` : formations, description, contenu texte, ordre, statut.
@@ -33,8 +37,8 @@ Oil Kam est une application web interne pour station-service. La version actuell
 
 ## Permissions
 
-- Employé : tâches personnelles, déclaration de pertes, formations personnelles.
-- Manager : tâches, historique, pertes globales, rapports, progression formation.
+- Employé : tâches personnelles, pointage, déclaration de pertes, formations personnelles.
+- Manager : tâches, historique, pointages, pertes globales, rapports, progression formation.
 - Admin : toutes les fonctions manager + gestion utilisateurs, produits et formations.
 
 ## Exports et rapports
@@ -48,5 +52,6 @@ Oil Kam est une application web interne pour station-service. La version actuell
 - Plusieurs questions par formation.
 - Export Excel/PDF avec librairies dédiées.
 - Journal d'audit.
+- Pointage par période et export dédié.
 - Sessions persistantes.
 - Déploiement sur serveur interne.

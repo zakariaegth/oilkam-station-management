@@ -7,6 +7,7 @@ from app.database import (
     create_user,
     get_connection,
     init_db,
+    record_attendance,
     reset_user_password,
     update_user,
     upsert_product,
@@ -189,6 +190,20 @@ class OilKamSmokeTests(unittest.TestCase):
                 ).fetchone()
 
             self.assertEqual(completion["comment"], "OK")
+
+    def test_attendance_record_creation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = self.build_db(tmp)
+            with get_connection(db_path) as conn:
+                employee_id = conn.execute(
+                    "SELECT id FROM users WHERE email = ?", ("employe@oilkam.demo",)
+                ).fetchone()["id"]
+                record_id = record_attendance(conn, user_id=employee_id, event_type="arrivee")
+                row = conn.execute("SELECT * FROM attendance_records WHERE id = ?", (record_id,)).fetchone()
+
+            self.assertEqual(row["user_id"], employee_id)
+            self.assertEqual(row["event_type"], "arrivee")
+            self.assertTrue(row["attendance_date"])
 
     def test_training_quiz_validation_creates_certificate(self):
         with tempfile.TemporaryDirectory() as tmp:

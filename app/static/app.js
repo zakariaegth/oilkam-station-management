@@ -1,15 +1,25 @@
-document.querySelectorAll("[data-fill-login]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const email = document.querySelector('input[name="email"]');
-    const password = document.querySelector('input[name="password"]');
-    if (email && password) {
-      document.querySelectorAll("[data-fill-login]").forEach((item) => {
-        item.classList.remove("is-selected");
-      });
-      button.classList.add("is-selected");
-      email.value = button.dataset.fillLogin;
-      password.value = "oilkam123";
-      password.focus();
-    }
-  });
+const currentPath = window.location.pathname;
+
+const routeForPath = (path) => {
+  if (path === "/" || path.startsWith("/dashboard")) return "home";
+  if (path.startsWith("/tasks")) return "tasks";
+  if (path.startsWith("/training")) return "training";
+  if (path.startsWith("/attendance") || path.startsWith("/pointage")) return "attendance";
+  if (path.startsWith("/losses")) return "losses";
+  return "";
+};
+
+const activeRoute = routeForPath(currentPath);
+
+document.querySelectorAll("[data-route]").forEach((link) => {
+  if (link.dataset.route === activeRoute) {
+    link.classList.add("is-active");
+    link.setAttribute("aria-current", "page");
+  }
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  });
+}
