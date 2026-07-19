@@ -74,26 +74,18 @@ L'objectif de l'application est de fournir une base de gestion simple pour une s
 
 ### Module formation
 
-- Liste des formations disponibles.
-- Contenu texte simple.
-- Quiz de validation.
-- Calcul automatique du score.
-- Validation si le score atteint le minimum configuré.
-- Suivi de progression par employé.
-- Vue manager/admin de la progression équipe.
-- Gestion admin des modules et quiz.
-
-### Attestation
-
-- Attestation HTML imprimable après validation d'une formation.
-- Nom de l'employé, formation, date, score.
-- Bouton "Imprimer / Enregistrer en PDF" via le navigateur.
+- Guide opérationnel consultable par employé, manager et admin.
+- 5 parties métier : Extérieur, Caisse, Périmé, Température, FDG.
+- Cartes simples avec description et accès aux tâches.
+- Pages détaillées avec check-lists de tâches à connaître ou vérifier.
+- Exemples réalistes intégrés en attendant les consignes définitives du tuteur.
+- Quiz, score et attestation retirés du parcours principal pour cette version.
 
 ### Rapports
 
 - Rapport imprimable des pertes par période.
 - Rapport imprimable des tâches complétées.
-- Rapport imprimable de progression des formations.
+- Rapport imprimable de progression des formations, conservé comme base technique à adapter.
 - Bouton d'impression navigateur.
 - Export CSV conservé pour les pertes.
 
@@ -248,7 +240,7 @@ Les tests couvrent :
 - création et modification de produits ;
 - déclaration d'une perte et calcul automatique ;
 - validation d'une tâche ;
-- validation d'une formation et génération d'attestation ;
+- disponibilité des catégories de formation opérationnelle ;
 - règle d'accès admin selon le rôle.
 
 ## Parcours à tester
@@ -260,8 +252,9 @@ Les tests couvrent :
 3. Valider une tâche avec commentaire.
 4. Aller dans `Pointage` et pointer l'arrivée ou le départ.
 5. Aller dans `Pertes` et déclarer une perte.
-6. Aller dans `Formations`, lire un module et valider un quiz.
-7. Ouvrir l'attestation si le quiz est réussi.
+6. Aller dans `Formations`.
+7. Ouvrir les parties `Extérieur`, `Caisse`, `Périmé`, `Température` et `FDG`.
+8. Consulter les check-lists métier.
 
 ### Manager
 
@@ -272,14 +265,14 @@ Les tests couvrent :
 5. Consulter les pointages du jour.
 6. Consulter les pertes et exporter le CSV.
 7. Ouvrir `Rapports` et tester l'impression.
-8. Consulter la progression formation des employés.
+8. Consulter les guides opérationnels dans `Formation`.
 
 ### Admin
 
 1. Se connecter avec `admin@oilkam.demo`.
 2. Gérer les utilisateurs.
 3. Gérer les produits.
-4. Gérer les modules de formation et les quiz.
+4. Consulter le guide opérationnel de formation.
 5. Gérer les tâches.
 6. Consulter les pertes et rapports.
 

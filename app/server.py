@@ -37,6 +37,75 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT_DIR / "app" / "static"
 SESSIONS: dict[str, int] = {}
 
+TRAINING_SECTIONS = [
+    {
+        "slug": "exterieur",
+        "title": "Extérieur",
+        "description": "Repères de contrôle pour la piste, les pompes et les zones de passage.",
+        "tasks": [
+            "Vérifier la propreté de la piste.",
+            "Contrôler l'état général des pompes.",
+            "Vérifier la présence des équipements de sécurité.",
+            "Signaler toute anomalie visible à l'extérieur.",
+            "S'assurer que les zones de passage sont dégagées.",
+        ],
+    },
+    {
+        "slug": "caisse",
+        "title": "Caisse",
+        "description": "Gestes essentiels pour l'ouverture, l'accueil client et le suivi des paiements.",
+        "tasks": [
+            "Vérifier l'ouverture correcte de la caisse.",
+            "Contrôler le fond de caisse.",
+            "Accueillir le client avec une attitude professionnelle.",
+            "Enregistrer correctement les paiements.",
+            "Vérifier les tickets et justificatifs.",
+            "Signaler tout écart de caisse au responsable.",
+        ],
+    },
+    {
+        "slug": "perime",
+        "title": "Périmé",
+        "description": "Contrôle des dates, retrait des produits concernés et signalement au manager.",
+        "tasks": [
+            "Contrôler les dates limites de consommation des produits.",
+            "Retirer les produits périmés du rayon.",
+            "Séparer les produits à signaler au manager.",
+            "Noter les références concernées.",
+            "Vérifier les rayons sensibles : boissons, snacks, produits frais.",
+            "Respecter la procédure de retrait des produits périmés.",
+        ],
+    },
+    {
+        "slug": "temperature",
+        "title": "Température",
+        "description": "Suivi des équipements froids et signalement rapide des écarts.",
+        "tasks": [
+            "Vérifier la température des frigos.",
+            "Noter les températures relevées.",
+            "Signaler toute température anormale.",
+            "Vérifier que les portes des équipements froids ferment correctement.",
+            "Contrôler les zones nécessitant un suivi de température.",
+            "Prévenir le manager en cas d'écart.",
+        ],
+    },
+    {
+        "slug": "fdg",
+        "title": "FDG",
+        "description": "Points de vigilance liés à l'état, la propreté et l'utilisation de la machine FDG.",
+        "tasks": [
+            "Vérifier l'état général de la machine FDG.",
+            "Contrôler que la machine est propre.",
+            "Vérifier le bon fonctionnement avant utilisation.",
+            "Signaler tout bruit ou dysfonctionnement anormal.",
+            "Respecter les consignes de sécurité liées à la machine.",
+            "Prévenir le manager en cas de problème technique.",
+        ],
+    },
+]
+
+TRAINING_SECTIONS_BY_SLUG = {section["slug"]: section for section in TRAINING_SECTIONS}
+
 
 def esc(value: object) -> str:
     return html.escape("" if value is None else str(value), quote=True)
@@ -102,9 +171,12 @@ class OilKamHandler(BaseHTTPRequestHandler):
         elif path == "/losses/export":
             self.require_roles(user, {"manager", "admin"}, lambda: self.export_losses(user, self.query_params()))
         elif path == "/training":
-            self.require_user(user, lambda: self.respond_html(training_page_v3(user, self.query_params())))
+            self.require_user(user, lambda: self.respond_html(training_operational_page(user, self.query_params())))
+        elif path in {f"/training/{slug}" for slug in TRAINING_SECTIONS_BY_SLUG}:
+            slug = path.rsplit("/", 1)[1]
+            self.require_user(user, lambda: self.respond_html(training_section_page(user, slug)))
         elif path == "/training/certificate":
-            self.require_user(user, lambda: self.respond_html(certificate_page(user, self.query_params())))
+            redirect(self, "/training?message=" + quote("Les formations sont maintenant présentées sous forme de check-list opérationnelle."))
         elif path == "/reports":
             self.require_roles(user, {"manager", "admin"}, lambda: self.respond_html(reports_page(user, self.query_params())))
         elif path == "/admin/users":
@@ -112,7 +184,15 @@ class OilKamHandler(BaseHTTPRequestHandler):
         elif path == "/admin/products":
             self.require_roles(user, {"admin"}, lambda: self.respond_html(admin_products_page(user, self.query_params())))
         elif path == "/admin/training":
-            self.require_roles(user, {"admin"}, lambda: self.respond_html(admin_training_page(user, self.query_params())))
+            self.require_roles(
+                user,
+                {"admin"},
+                lambda: redirect(
+                    self,
+                    "/training?message="
+                    + quote("La gestion détaillée des formations sera ajoutée après validation des contenus."),
+                ),
+            )
         elif path == "/logout":
             self.logout()
         else:
@@ -148,9 +228,24 @@ class OilKamHandler(BaseHTTPRequestHandler):
         elif path == "/admin/products/save":
             self.require_roles(user, {"admin"}, lambda: self.save_product_action(form))
         elif path == "/admin/training/save":
-            self.require_roles(user, {"admin"}, lambda: self.save_training_module_action(form))
+            self.require_roles(
+                user,
+                {"admin"},
+                lambda: redirect(
+                    self,
+                    "/training?message="
+                    + quote("La gestion détaillée des formations sera ajoutée après validation des contenus."),
+                ),
+            )
         elif path == "/training/quiz":
-            self.require_user(user, lambda: self.submit_training_quiz(user, form))
+            self.require_user(
+                user,
+                lambda: redirect(
+                    self,
+                    "/training?message="
+                    + quote("Les quiz sont désactivés pour cette version du module Formation."),
+                ),
+            )
         else:
             self.not_found()
 
@@ -556,7 +651,7 @@ def layout(
         reports_link = '<a href="/reports">Rapports</a>' if user["role"] in {"manager", "admin"} else ""
         admin_links = ""
         if user["role"] == "admin":
-            admin_links = '<a href="/admin/users">Utilisateurs</a><a href="/admin/products">Produits</a><a href="/admin/training">Modules</a>'
+            admin_links = '<a href="/admin/users">Utilisateurs</a><a href="/admin/products">Produits</a>'
         primary_links = """
             <a href="/dashboard" data-route="home">Accueil</a>
             <a href="/tasks" data-route="tasks">Tâches</a>
@@ -915,7 +1010,7 @@ def employee_dashboard(user: sqlite3.Row) -> str:
         <p class="section-kicker">Raccourcis</p>
         <h2>Actions rapides</h2>
         <a class="quick-action" href="/losses"><span class="action-mark fuel"></span><strong>Déclarer une perte</strong><small>Formulaire rapide</small></a>
-        <a class="quick-action" href="/training"><span class="action-mark safety"></span><strong>Mes formations</strong><small>Progression personnelle</small></a>
+        <a class="quick-action" href="/training"><span class="action-mark safety"></span><strong>Mes formations</strong><small>Guides opérationnels</small></a>
         <a class="quick-action" href="/pointage"><span class="action-mark history"></span><strong>Pointage</strong><small>Arrivée et départ</small></a>
       </aside>
     </section>
@@ -1099,7 +1194,7 @@ def admin_dashboard(user: sqlite3.Row) -> str:
         <div class="setting-row"><span>Module tâches</span><strong>Actif</strong></div>
         <a class="quick-action" href="/admin/users"><span class="action-mark safety"></span><strong>Gérer les utilisateurs</strong><small>Comptes et rôles</small></a>
         <a class="quick-action" href="/admin/products"><span class="action-mark fuel"></span><strong>Gérer les produits</strong><small>Catalogue pertes</small></a>
-        <a class="quick-action" href="/admin/training"><span class="action-mark history"></span><strong>Gérer les formations</strong><small>Modules et quiz</small></a>
+        <a class="quick-action" href="/training"><span class="action-mark history"></span><strong>Guide formation</strong><small>Procédures métier</small></a>
         {task_form()}
       </aside>
     </section>
@@ -1591,6 +1686,98 @@ def losses_page(user: sqlite3.Row, filters: dict[str, str]) -> str:
               <button class="primary-button" type="submit">Enregistrer la perte</button>
             </form>
           </aside>
+        </section>
+        """,
+        user,
+    )
+
+
+def training_operational_page(user: sqlite3.Row, params: dict[str, str] | None = None) -> str:
+    params = params or {}
+    message = params.get("message", "")
+    feedback = f'<p class="success-message">{esc(message)}</p>' if message else ""
+    cards = "\n".join(training_section_card(section) for section in TRAINING_SECTIONS)
+    return layout(
+        "Formation",
+        f"""
+        <section class="hero-band dashboard-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Module formation</p>
+            <h1>Guide opérationnel</h1>
+            <p>Les formations sont organisées par zones métier et présentées sous forme de tâches à comprendre ou vérifier.</p>
+          </div>
+          <div class="progress-tile"><span>{len(TRAINING_SECTIONS)}</span><small>Parties</small></div>
+        </section>
+        <section class="panel page-panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Formation terrain</p>
+              <h2>Parties disponibles</h2>
+            </div>
+          </div>
+          {feedback}
+          <div class="training-grid">{cards}</div>
+        </section>
+        <section class="side-note">
+          <strong>Version de travail</strong>
+          <span>Les exemples seront remplacés par les consignes définitives transmises par le tuteur.</span>
+        </section>
+        """,
+        user,
+    )
+
+
+def training_section_card(section: dict[str, object]) -> str:
+    slug = esc(section["slug"])
+    return f"""
+    <article class="module-card training-section-card">
+      <div>
+        <p class="section-kicker">Formation</p>
+        <h3>{esc(section["title"])}</h3>
+        <p>{esc(section["description"])}</p>
+      </div>
+      <a class="primary-button small" href="/training/{slug}">Voir les tâches</a>
+    </article>
+    """
+
+
+def training_section_page(user: sqlite3.Row, slug: str) -> str:
+    section = TRAINING_SECTIONS_BY_SLUG.get(slug)
+    if section is None:
+        return layout(
+            "Formation",
+            '<section class="panel page-panel"><h1>Formation introuvable</h1><p>Cette partie de formation n’existe pas.</p><a class="ghost-link" href="/training">Retour formation</a></section>',
+            user,
+        )
+    tasks = "\n".join(
+        f"""
+        <li class="training-task-item">
+          <span class="task-status">✓</span>
+          <span>{esc(task)}</span>
+        </li>
+        """
+        for task in section["tasks"]
+    )
+    return layout(
+        f"Formation - {section['title']}",
+        f"""
+        <section class="hero-band dashboard-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Formation terrain</p>
+            <h1>{esc(section["title"])}</h1>
+            <p>{esc(section["description"])}</p>
+          </div>
+          <div class="progress-tile"><span>{len(section["tasks"])}</span><small>Tâches</small></div>
+        </section>
+        <section class="panel page-panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Check-list</p>
+              <h2>Tâches à connaître</h2>
+            </div>
+            <a class="ghost-link" href="/training">Retour formation</a>
+          </div>
+          <ul class="training-task-list">{tasks}</ul>
         </section>
         """,
         user,

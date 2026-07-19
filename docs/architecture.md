@@ -30,26 +30,24 @@ Oil Kam est une application web interne pour station-service. La version actuell
 - `attendance_records` : pointages d'arrivée et de départ par utilisateur, date et heure.
 - `products` : catalogue produits pour pertes, catégorie, prix unitaire, unité, statut.
 - `losses` : déclarations de pertes, quantité, motif, date, déclarant, valeur calculée.
-- `training_modules` : formations, description, contenu texte, ordre, statut.
-- `training_quizzes` : question de validation et réponses possibles.
-- `training_progress` : progression par employé, score, statut, date de validation.
-- `training_certificates` : attestations générées après validation.
+- `training_modules`, `training_quizzes`, `training_progress`, `training_certificates` : anciennes tables conservées comme base technique, mais le parcours Formation actuel utilise un guide opérationnel codé simplement dans `app/server.py`.
 
 ## Permissions
 
-- Employé : tâches personnelles, pointage, déclaration de pertes, formations personnelles.
-- Manager : tâches, historique, pointages, pertes globales, rapports, progression formation.
-- Admin : toutes les fonctions manager + gestion utilisateurs, produits et formations.
+- Employé : tâches personnelles, pointage, déclaration de pertes, guide formation.
+- Manager : tâches, historique, pointages, pertes globales, rapports, guide formation.
+- Admin : toutes les fonctions manager + gestion utilisateurs, produits et consultation du guide formation.
 
 ## Exports et rapports
 
 - Export CSV pour les pertes.
-- Pages imprimables pour rapports et attestations.
+- Pages imprimables pour rapports.
 - Export `.xlsx` non ajouté pour garder le projet sans dépendances externes.
 
 ## Évolutions possibles
 
-- Plusieurs questions par formation.
+- Remplacer les exemples de formation par les procédures définitives du tuteur.
+- Ajouter une gestion admin des catégories et check-lists si le besoin est confirmé.
 - Export Excel/PDF avec librairies dédiées.
 - Journal d'audit.
 - Pointage par période et export dédié.

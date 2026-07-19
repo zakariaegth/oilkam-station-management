@@ -730,6 +730,59 @@ h2 {
   margin: 0;
 }
 
+.training-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.training-section-card {
+  align-content: space-between;
+  min-height: 220px;
+}
+
+.training-section-card .primary-button {
+  justify-self: start;
+}
+
+.training-task-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.training-task-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.side-note {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--yellow);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.side-note span {
+  color: var(--muted);
+}
+
 .training-content {
   margin-top: 12px;
   padding: 12px;
@@ -960,6 +1013,10 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .training-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .login-shell {
     grid-template-columns: 1fr;
   }
@@ -1037,6 +1094,15 @@ th {
 
   .stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .training-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .side-note {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .meter {

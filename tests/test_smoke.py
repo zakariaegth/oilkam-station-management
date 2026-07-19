@@ -11,10 +11,9 @@ from app.database import (
     reset_user_password,
     update_user,
     upsert_product,
-    validate_training_quiz,
     verify_password,
 )
-from app.server import can_access_admin
+from app.server import TRAINING_SECTIONS_BY_SLUG, can_access_admin
 
 
 class OilKamSmokeTests(unittest.TestCase):
@@ -205,35 +204,11 @@ class OilKamSmokeTests(unittest.TestCase):
             self.assertEqual(row["event_type"], "arrivee")
             self.assertTrue(row["attendance_date"])
 
-    def test_training_quiz_validation_creates_certificate(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            db_path = self.build_db(tmp)
-            with get_connection(db_path) as conn:
-                employee_id = conn.execute(
-                    "SELECT id FROM users WHERE email = ?", ("employe@oilkam.demo",)
-                ).fetchone()["id"]
-                module = conn.execute(
-                    """
-                    SELECT m.id, q.correct_option
-                    FROM training_modules m
-                    JOIN training_quizzes q ON q.module_id = m.id
-                    ORDER BY m.sort_order
-                    LIMIT 1
-                    """
-                ).fetchone()
-                score = validate_training_quiz(
-                    conn,
-                    user_id=employee_id,
-                    module_id=module["id"],
-                    selected_option=module["correct_option"],
-                )
-                cert = conn.execute(
-                    "SELECT * FROM training_certificates WHERE user_id = ? AND module_id = ?",
-                    (employee_id, module["id"]),
-                ).fetchone()
-
-            self.assertEqual(score, 100)
-            self.assertIsNotNone(cert)
+    def test_training_operational_categories_are_available(self):
+        expected = {"exterieur", "caisse", "perime", "temperature", "fdg"}
+        self.assertEqual(set(TRAINING_SECTIONS_BY_SLUG), expected)
+        self.assertIn("Contrôler le fond de caisse.", TRAINING_SECTIONS_BY_SLUG["caisse"]["tasks"])
+        self.assertIn("Vérifier l'état général de la machine FDG.", TRAINING_SECTIONS_BY_SLUG["fdg"]["tasks"])
 
     def test_employee_cannot_access_admin_area(self):
         self.assertFalse(can_access_admin("employe"))
